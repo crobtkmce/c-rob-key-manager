@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -36,6 +36,11 @@ export function UsersSection({ filterRole, title }: { filterRole?: string; title
   const { user, role } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    userId: string;
+    userName: string;
+    email: string;
+  } | null>(null);
   const [roleConfirm, setRoleConfirm] = useState<{
     userId: string;
     newRole: string;
@@ -56,6 +61,24 @@ export function UsersSection({ filterRole, title }: { filterRole?: string; title
       if (error) throw error;
       return data || [];
     },
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: async (userId: string) => {
+      if (user && userId === user.id) throw new Error("You cannot delete your own account.");
+      const { error } = await supabase!.rpc("admin_delete_user", {
+        target_user_id: userId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin_users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin_users_count"] });
+      queryClient.invalidateQueries({ queryKey: ["admin_execom_count"] });
+      setDeleteConfirm(null);
+      toast.success("User successfully deleted");
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to delete user"),
   });
 
   const updateRole = useMutation({
@@ -224,6 +247,67 @@ export function UsersSection({ filterRole, title }: { filterRole?: string; title
               disabled={updateRole.isPending}
             >
               {updateRole.isPending ? "Updating..." : "Confirm Change"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <DialogContent className="border-sidebar-border bg-card/95 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Delete Member
+            </DialogTitle>
+            <DialogDescription className="pt-3">
+              Are you sure you want to permanently delete this member?
+              <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md space-y-2 text-sm text-foreground">
+                <p>
+                  <span className="text-muted-foreground font-medium">Name:</span>{" "}
+                  {deleteConfirm?.userName}
+                </p>
+                <p>
+                  <span className="text-muted-foreground font-medium">Email:</span>{" "}
+                  {deleteConfirm?.email || "N/A"}
+                </p>
+                <p className="font-mono text-xs mt-2 pt-2 border-t border-destructive/10">
+                  <span className="text-muted-foreground font-sans font-medium">Account ID:</span>{" "}
+                  {deleteConfirm?.userId}
+                </p>
+                {deleteConfirm?.email.startsWith("test_") && (
+                  <p className="font-mono text-xs text-warning bg-warning/10 p-1 rounded mt-1">
+                    ⚠️ Flagged as Synthetic Test Data
+                  </p>
+                )}
+              </div>
+              <p className="mt-4 text-xs font-bold text-destructive">
+                Warning: This action cannot be undone.
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                If this user has genuine booking history, the database will safely block the
+                deletion to preserve historical records. Test bookings attached to synthetic
+                accounts should be cleaned up via SQL migration.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirm(null)}
+              disabled={deleteUser.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteConfirm) {
+                  deleteUser.mutate(deleteConfirm.userId);
+                }
+              }}
+              disabled={deleteUser.isPending}
+            >
+              {deleteUser.isPending ? "Deleting..." : "Delete Permanently"}
             </Button>
           </DialogFooter>
         </DialogContent>

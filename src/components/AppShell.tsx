@@ -1,5 +1,13 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { CalendarClock, KeyRound, LogOut, ShieldCheck, Users, CircleHelp, Info } from "lucide-react";
+import {
+  CalendarClock,
+  KeyRound,
+  LogOut,
+  ShieldCheck,
+  Users,
+  CircleHelp,
+  Info,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";

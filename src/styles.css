@@ -357,3 +357,89 @@
   }
 }
 
+
+@keyframes floating-mech-1 {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(5deg);
+  }
+}
+
+@keyframes floating-mech-2 {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(20px) rotate(-5deg);
+  }
+}
+
+@keyframes floating-mech-3 {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-10deg);
+  }
+}
+
+@layer utilities {
+  .animate-floating-mech-1 {
+    animation: floating-mech-1 6s ease-in-out infinite;
+  }
+  .animate-floating-mech-2 {
+    animation: floating-mech-2 7s ease-in-out infinite;
+  }
+  .animate-floating-mech-3 {
+    animation: floating-mech-3 8s ease-in-out infinite;
+  }
+}
+
+
+
+@keyframes float-rotate-1 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(15deg); }
+}
+
+@keyframes float-rotate-2 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(25px) rotate(-15deg); }
+}
+
+@keyframes float-pulse {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
+  50% { transform: translateY(-15px) scale(1.05); opacity: 0.45; }
+}
+
+@keyframes slow-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@layer utilities {
+  
+  .animate-float-rot-1 {
+    animation: float-rotate-1 8s ease-in-out infinite;
+  }
+  .animate-float-rot-2 {
+    animation: float-rotate-2 10s ease-in-out infinite;
+  }
+  .animate-float-pulse {
+    animation: float-pulse 7s ease-in-out infinite;
+  }
+  .animate-slow-spin-mech {
+    animation: slow-spin 25s linear infinite;
+  }
+}
+
+
+
+
+
+@layer utilities {
+  
+  
+}

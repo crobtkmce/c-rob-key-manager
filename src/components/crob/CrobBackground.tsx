@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import { MatrixRain } from "./MatrixRain";
+import { FloatingMechanicals } from "./FloatingMechanicals";
 
 interface CrobBackgroundProps {
   className?: string;
@@ -21,7 +23,6 @@ export function CrobBackground({
     >
       {/* Technical grid overlay */}
       <div className={cn("absolute inset-0", gridClass)} />
-
       {/* Radial glow effects */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-[10%] h-[60%] w-[40%] rounded-full bg-primary/[0.08] blur-[100px]" />
@@ -30,7 +31,6 @@ export function CrobBackground({
           <div className="absolute bottom-0 left-[30%] h-[40%] w-[40%] rounded-full bg-primary/[0.04] blur-[120px]" />
         )}
       </div>
-
       {/* Floating particles */}
       {showParticles && (
         <div className="absolute inset-0">
@@ -52,29 +52,41 @@ export function CrobBackground({
           ))}
         </div>
       )}
-
       {/* Shooting Stars */}
-      {showParticles && variant === "hero" && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {showParticles && (variant === "hero" || variant === "auth") && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none motion-reduce:hidden">
           <div
-            className="absolute top-[10%] left-[20%] h-[1px] w-[150px] animate-shooting-star bg-gradient-to-r from-transparent via-primary/50 to-white"
-            style={{ animationDelay: "2s", animationDuration: "12s" }}
+            className="absolute top-[10%] left-[20%] h-[1px] w-[150px] opacity-0 animate-shooting-star bg-gradient-to-r from-transparent via-primary/50 to-white"
+            style={{ animationDelay: "1.5s", animationDuration: "9s" }}
           />
           <div
-            className="absolute top-[40%] left-[70%] h-[1px] w-[200px] animate-shooting-star bg-gradient-to-r from-transparent via-accent/50 to-white"
-            style={{ animationDelay: "6s", animationDuration: "15s" }}
+            className="absolute top-[40%] left-[70%] h-[1px] w-[200px] opacity-0 animate-shooting-star bg-gradient-to-r from-transparent via-accent/50 to-white"
+            style={{ animationDelay: "3s", animationDuration: "11s" }}
           />
           <div
-            className="absolute top-[5%] left-[80%] h-[1px] w-[100px] animate-shooting-star bg-gradient-to-r from-transparent via-primary/40 to-white"
-            style={{ animationDelay: "10s", animationDuration: "18s" }}
+            className="absolute top-[5%] left-[80%] h-[1px] w-[100px] opacity-0 animate-shooting-star bg-gradient-to-r from-transparent via-primary/40 to-white"
+            style={{ animationDelay: "6s", animationDuration: "13s" }}
           />
           <div
-            className="absolute top-[60%] left-[10%] h-[1px] w-[250px] animate-shooting-star bg-gradient-to-r from-transparent via-accent/40 to-white"
-            style={{ animationDelay: "1s", animationDuration: "20s" }}
+            className="absolute top-[60%] left-[10%] h-[1px] w-[250px] opacity-0 animate-shooting-star bg-gradient-to-r from-transparent via-accent/40 to-white"
+            style={{ animationDelay: "4.5s", animationDuration: "14s" }}
+          />
+          {/* Additional instances for increased frequency */}
+          <div
+            className="absolute top-[25%] left-[40%] h-[1px] w-[170px] opacity-0 animate-shooting-star bg-gradient-to-r from-transparent via-primary/45 to-white"
+            style={{ animationDelay: "7.5s", animationDuration: "10s" }}
+          />
+          <div
+            className="absolute top-[80%] left-[50%] h-[1px] w-[140px] opacity-0 animate-shooting-star bg-gradient-to-r from-transparent via-accent/45 to-white"
+            style={{ animationDelay: "9s", animationDuration: "12s" }}
           />
         </div>
       )}
 
+      {/* Matrix Rain */}
+      {showParticles && (variant === "hero" || variant === "auth") && <MatrixRain />}
+      {/* Floating Mechanicals */}
+      {showParticles && (variant === "hero" || variant === "auth") && <FloatingMechanicals />}
       {/* Faint code-like decorative elements */}
       {variant === "hero" && (
         <>

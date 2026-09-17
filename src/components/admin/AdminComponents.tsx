@@ -63,7 +63,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
 
-export function OverviewSection() {
+export function OverviewSection({
+  onNavigate,
+}: {
+  onNavigate?: (tab: string, filter?: string) => void;
+}) {
   const { data: currentSession, isLoading: isLoadingSession } = useQuery({
     queryKey: ["admin_current_session"],
     queryFn: async () => {
@@ -190,7 +194,14 @@ export function OverviewSection() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-4">
-        <Card className="panel bg-card/40 fade-up" style={{ animationDelay: "0ms" }}>
+        <Card
+          className="panel bg-card/40 fade-up cursor-pointer hover:border-primary/50 hover:bg-card/60 transition-all active:scale-[0.98]"
+          style={{ animationDelay: "0ms" }}
+          onClick={() => onNavigate && onNavigate("members")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && onNavigate && onNavigate("members")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Members</CardTitle>
             <Users className="size-4 text-muted-foreground" />
@@ -201,7 +212,14 @@ export function OverviewSection() {
           </CardContent>
         </Card>
 
-        <Card className="panel bg-card/40 fade-up" style={{ animationDelay: "50ms" }}>
+        <Card
+          className="panel bg-card/40 fade-up cursor-pointer hover:border-primary/50 hover:bg-card/60 transition-all active:scale-[0.98]"
+          style={{ animationDelay: "50ms" }}
+          onClick={() => onNavigate && onNavigate("execom")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && onNavigate && onNavigate("execom")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total ExeCom</CardTitle>
             <Users className="size-4 text-warning" />
@@ -214,7 +232,14 @@ export function OverviewSection() {
           </CardContent>
         </Card>
 
-        <Card className="panel bg-card/40 fade-up" style={{ animationDelay: "100ms" }}>
+        <Card
+          className="panel bg-card/40 fade-up cursor-pointer hover:border-primary/50 hover:bg-card/60 transition-all active:scale-[0.98]"
+          style={{ animationDelay: "100ms" }}
+          onClick={() => onNavigate && onNavigate("daily-bookings")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && onNavigate && onNavigate("daily-bookings")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
             <Activity className="size-4 text-primary" />
@@ -227,7 +252,14 @@ export function OverviewSection() {
           </CardContent>
         </Card>
 
-        <Card className="panel bg-card/40 fade-up" style={{ animationDelay: "150ms" }}>
+        <Card
+          className="panel bg-card/40 fade-up cursor-pointer hover:border-primary/50 hover:bg-card/60 transition-all active:scale-[0.98]"
+          style={{ animationDelay: "150ms" }}
+          onClick={() => onNavigate && onNavigate("bookings", "Pending")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && onNavigate && onNavigate("bookings", "Pending")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Bookings</CardTitle>
             <Calendar className="size-4 text-warning" />
@@ -292,7 +324,8 @@ export function OverviewSection() {
   );
 }
 
-export function BookingsSection() {
+export function BookingsSection({ defaultStatus = "All" }: { defaultStatus?: string }) {
+  const [statusFilter, setStatusFilter] = useState(defaultStatus);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const { user, role } = useAuth();
@@ -375,16 +408,24 @@ export function BookingsSection() {
   };
 
   const filtered =
-    bookings?.filter(
-      (b: any) =>
+    bookings?.filter((b: any) => {
+      const matchesSearch =
         b.id.toLowerCase().includes(search.toLowerCase()) ||
         b.profiles?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-        b.profiles?.email?.toLowerCase().includes(search.toLowerCase()),
-    ) ?? [];
+        b.profiles?.email?.toLowerCase().includes(search.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "All" ||
+        (statusFilter === "Approved" && b.status === "confirmed") ||
+        (statusFilter === "Rejected" && (b.status === "rejected" || b.status === "cancelled")) ||
+        (statusFilter === "Pending" && b.status === "pending");
+
+      return matchesSearch && matchesStatus;
+    }) ?? [];
 
   return (
     <Card className="panel fade-up">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <CardTitle>Booking Requests</CardTitle>
           <Button
@@ -405,14 +446,31 @@ export function BookingsSection() {
             <RefreshCw className={cn("size-4", isRefetching && "animate-spin")} />
           </Button>
         </div>
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Search bookings..."
-            className="pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search bookings..."
+              className="pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-1.5 p-1 bg-muted/30 rounded-lg border border-border/50">
+            {["All", "Pending", "Approved", "Rejected"].map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  statusFilter === s
+                    ? "bg-background shadow-sm text-foreground ring-1 ring-border"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -865,3 +923,5 @@ export function KeyStatusSection() {
 }
 
 export { LogsSection } from "./LogsSection";
+
+export { DailyBookingsSection } from "./DailyBookingsSection";

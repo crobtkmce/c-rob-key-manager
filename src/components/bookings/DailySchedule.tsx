@@ -29,7 +29,11 @@ export function DailySchedule() {
   // Prevent navigating to the past
   const canGoBack = !isBefore(startOfDay(selectedDate), startOfDay(new Date())) && !isToday;
 
-  const { data: schedule, isLoading, error } = useQuery({
+  const {
+    data: schedule,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["schedule", selectedDate.toISOString()],
     queryFn: async () => {
       if (!supabase) return [];

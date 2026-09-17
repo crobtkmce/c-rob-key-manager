@@ -69,6 +69,16 @@ function ResetPasswordPage() {
         </Link>
       }
     >
+      <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-center">
+        <p className="text-sm font-medium text-amber-500">
+          Email-based password reset is temporarily disabled during this testing phase.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Please log in using your Google account instead.
+        </p>
+      </div>
+
+      {/* Temporarily disabled form
       {done ? (
         <p className="text-sm text-success">Password updated. Taking you to your dashboard…</p>
       ) : (
@@ -103,6 +113,7 @@ function ResetPasswordPage() {
           </Button>
         </form>
       )}
+      */}
     </AuthLayout>
   );
 }

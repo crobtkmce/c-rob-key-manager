@@ -26,6 +26,7 @@ import {
   UsersSection,
   LockerStatusSection,
   KeyStatusSection,
+  DailyBookingsSection,
 } from "@/components/admin/AdminComponents";
 
 export const Route = createFileRoute("/admin")({
@@ -46,6 +47,12 @@ const TABS = [
 function AdminDashboard() {
   const { user, profile, role, loading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  const [bookingFilter, setBookingFilter] = useState("All");
+
+  function handleNavigate(tab: string, filter?: string) {
+    setActiveTab(tab);
+    if (filter) setBookingFilter(filter);
+  }
 
   if (loading) {
     return (
@@ -158,8 +165,9 @@ function AdminDashboard() {
 
       <AnimatedSection className="flex flex-col gap-6">
         <main className="flex-1 min-w-0">
-          {activeTab === "overview" && <OverviewSection />}
-          {activeTab === "bookings" && <BookingsSection />}
+          {activeTab === "overview" && <OverviewSection onNavigate={handleNavigate} />}
+          {activeTab === "bookings" && <BookingsSection defaultStatus={bookingFilter} />}
+          {activeTab === "daily-bookings" && <DailyBookingsSection />}
           {activeTab === "members" && <UsersSection filterRole="member" title="Member List" />}
           {activeTab === "admins" && <UsersSection filterRole="admin" title="Admins" />}
           {activeTab === "execom" && <UsersSection filterRole="execom" title="ExeCom Members" />}

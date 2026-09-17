@@ -17,14 +17,18 @@ function AboutPage() {
               <GradientText>C-ROB Smart Key Locker</GradientText>
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              C-ROB Smart Key Locker replaces the traditional sign-out register with a secure hardware locker and an automated booking system. It is designed to provide role-based booking and access control for the C-ROB lab key at TKMCE.
+              C-ROB Smart Key Locker replaces the traditional sign-out register with a secure
+              hardware locker and an automated booking system. It is designed to provide role-based
+              booking and access control for the C-ROB lab key at TKMCE.
             </p>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-semibold mb-2">How it works</h3>
             <p className="text-muted-foreground leading-relaxed mb-3">
-              Members reserve a time slot in advance and unlock the locker using a secure One-Time Password (OTP). Execom members have direct fingerprint access. Every handover is logged in real time, ensuring strict accountability and key custody tracking.
+              Members reserve a time slot in advance and unlock the locker using a secure One-Time
+              Password (OTP). Execom members have direct fingerprint access. Every handover is
+              logged in real time, ensuring strict accountability and key custody tracking.
             </p>
           </div>
 
