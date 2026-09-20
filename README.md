@@ -125,11 +125,3 @@ Content-Type: application/json
 
 _(Valid `event_type`s: `locker_opened`, `key_removed`, `key_returned`, `power_restored`)_
 
----
-
-## 🤖 Teamwork & Collaboration
-
-<div align="center">
-  <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800" alt="Students working on electronics" width="45%" style="margin-right: 10px; border-radius: 8px;" />
-  <img src="https://images.unsplash.com/photo-1535905557558-afc4877a26fc?auto=format&fit=crop&q=80&w=800" alt="Robotics teamwork" width="45%" style="border-radius: 8px;" />
-</div>
