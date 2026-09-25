@@ -241,8 +241,13 @@ export function CurrentSession() {
                   ? "Active Booking"
                   : "Upcoming Booking"}
             </CardTitle>
-            <CardDescription className="text-foreground/80 mt-1">
-              {format(start, "h:mm a")} – {format(end, "h:mm a")}
+            <CardDescription className="text-foreground/80 mt-1 flex flex-col gap-1">
+              <span>
+                {format(start, "h:mm a")} – {format(end, "h:mm a")}
+              </span>
+              {!heldSession && isAfter(now, start) && (
+                <span className="text-xs opacity-80">Please check your spam folder for OTPs.</span>
+              )}
             </CardDescription>
           </div>
           <div className="text-right">
