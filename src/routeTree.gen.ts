@@ -15,6 +15,7 @@ import { Route as AccessDeniedRouteImport } from './routes/access-denied'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ExecomRouteImport } from './routes/execom'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as GuidelinesRouteImport } from './routes/guidelines'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MemberRouteImport } from './routes/member'
@@ -55,6 +56,11 @@ const ExecomRoute = ExecomRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidelinesRoute = GuidelinesRouteImport.update({
+  id: '/guidelines',
+  path: '/guidelines',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HelpRoute = HelpRouteImport.update({
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/execom': typeof ExecomRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/guidelines': typeof GuidelinesRoute
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
   '/member': typeof MemberRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/access-denied': typeof AccessDeniedRoute
   '/admin': typeof AdminRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/guidelines': typeof GuidelinesRoute
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
   '/member': typeof MemberRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/execom': typeof ExecomRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/guidelines': typeof GuidelinesRoute
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
   '/member': typeof MemberRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/execom'
     | '/forgot-password'
+    | '/guidelines'
     | '/help'
     | '/login'
     | '/member'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/access-denied'
     | '/admin'
     | '/forgot-password'
+    | '/guidelines'
     | '/help'
     | '/login'
     | '/member'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/execom'
     | '/forgot-password'
+    | '/guidelines'
     | '/help'
     | '/login'
     | '/member'
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ExecomRoute: typeof ExecomRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  GuidelinesRoute: typeof GuidelinesRoute
   HelpRoute: typeof HelpRoute
   LoginRoute: typeof LoginRoute
   MemberRoute: typeof MemberRoute
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guidelines': {
+      id: '/guidelines'
+      path: '/guidelines'
+      fullPath: '/guidelines'
+      preLoaderRoute: typeof GuidelinesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/help': {
@@ -395,6 +415,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ExecomRoute: ExecomRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  GuidelinesRoute: GuidelinesRoute,
   HelpRoute: HelpRoute,
   LoginRoute: LoginRoute,
   MemberRoute: MemberRoute,

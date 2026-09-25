@@ -7,6 +7,7 @@ import {
   Users,
   CircleHelp,
   Info,
+  BookOpen,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -25,6 +26,12 @@ const NAV: NavItem[] = [
     to: "/member",
     label: "Member Dashboard",
     icon: CalendarClock,
+    roles: ["member"],
+  },
+  {
+    to: "/guidelines",
+    label: "User Guidelines",
+    icon: BookOpen,
     roles: ["member"],
   },
   {
