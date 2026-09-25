@@ -8,7 +8,8 @@ serve(async (req) => {
     // Only allow authorized cron requests
     const authHeader = req.headers.get("Authorization");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!serviceRoleKey || authHeader !== `Bearer ${serviceRoleKey}`) {
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    if (authHeader !== `Bearer ${serviceRoleKey}` && authHeader !== `Bearer ${cronSecret}`) {
       return new Response("Unauthorized", { status: 401 });
     }
 
