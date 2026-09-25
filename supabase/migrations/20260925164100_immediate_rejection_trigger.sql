@@ -10,10 +10,11 @@ BEGIN
     -- If it's the user cancelling their own booking, insert a dummy notification
     -- so that the cron-notifier doesn't send them an "admin rejected" email
     IF auth.uid() = OLD.user_id AND NOT public.is_staff(auth.uid()) THEN
-      -- Use a generic insert. (Assuming no unique constraint on user_id, booking_id, type, message)
-      -- If there is a unique constraint we might need to handle conflict, but typically notifications table allows inserts.
+      -- Use a generic insert.
+      -- ON CONFLICT DO NOTHING prevents errors if the dummy notification is already there.
       INSERT INTO public.notifications (user_id, booking_id, type, message)
-      VALUES (OLD.user_id, OLD.id, 'system', 'Booking Rejected Notification Sent');
+      VALUES (OLD.user_id, OLD.id, 'system', 'Booking Rejected Notification Sent')
+      ON CONFLICT ON CONSTRAINT uq_booking_notification DO NOTHING;
     ELSE
       -- It was an admin who rejected it. Try to get the cron secret.
       SELECT decrypted_secret INTO v_secret FROM vault.decrypted_secrets WHERE name = 'cron_secret';
