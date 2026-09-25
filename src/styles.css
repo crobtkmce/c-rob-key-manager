@@ -61,12 +61,12 @@
   --animate-fade-up: fade-up 0.6s ease-out both;
   --animate-fade-in: fade-in 0.5s ease-out both;
   --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
-  
+
   --animate-robot-idle: robot-idle 5s ease-in-out infinite;
   --animate-robot-glow: robot-glow 4s ease-in-out infinite alternate;
   --animate-gear-spin: gear-spin 10s linear infinite;
   --animate-gear-spin-reverse: gear-spin-reverse 15s linear infinite;
-  
+
   --animate-logo-float: logo-float 2.5s ease-in-out infinite;
   --animate-shooting-star: shooting-star 12s linear infinite;
 }
@@ -121,8 +121,7 @@
   --gradient-surface: linear-gradient(160deg, oklch(0.23 0.026 265) 0%, oklch(0.19 0.022 265) 100%);
   --glow-primary:
     0 0 0 1px oklch(0.62 0.19 258 / 0.35), 0 12px 40px -12px oklch(0.62 0.19 258 / 0.55);
-  --glow-subtle:
-    0 0 0 1px oklch(0.62 0.19 258 / 0.15), 0 8px 24px -8px oklch(0.62 0.19 258 / 0.25);
+  --glow-subtle: 0 0 0 1px oklch(0.62 0.19 258 / 0.15), 0 8px 24px -8px oklch(0.62 0.19 258 / 0.25);
 }
 
 @layer base {
@@ -152,39 +151,82 @@
 /* ===== Keyframes ===== */
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-12px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
 }
 
 @keyframes float-slow {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-8px) rotate(1deg); }
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1deg);
+  }
 }
 
 @keyframes float-gentle {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 @keyframes particle-drift-1 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
-  33% { transform: translate(60px, -80px) scale(1.8); opacity: 0.9; }
-  66% { transform: translate(-40px, 60px) scale(0.6); opacity: 0.4; }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+  }
+  33% {
+    transform: translate(60px, -80px) scale(1.8);
+    opacity: 0.9;
+  }
+  66% {
+    transform: translate(-40px, 60px) scale(0.6);
+    opacity: 0.4;
+  }
 }
 
 @keyframes particle-drift-2 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
-  33% { transform: translate(-70px, 40px) scale(1.5); opacity: 0.8; }
-  66% { transform: translate(50px, -60px) scale(0.5); opacity: 0.2; }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.4;
+  }
+  33% {
+    transform: translate(-70px, 40px) scale(1.5);
+    opacity: 0.8;
+  }
+  66% {
+    transform: translate(50px, -60px) scale(0.5);
+    opacity: 0.2;
+  }
 }
 
 @keyframes particle-drift-3 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
-  50% { transform: translate(40px, 80px) scale(1.9); opacity: 1; }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(40px, 80px) scale(1.9);
+    opacity: 1;
+  }
 }
 
 @keyframes logo-float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px) rotate(-2deg);
     filter: drop-shadow(0 0 6px oklch(0.62 0.19 258 / 0.3));
   }
@@ -209,7 +251,8 @@
 }
 
 @keyframes robot-idle {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) translateX(0) rotate(0deg) scale(1);
   }
   20% {
@@ -227,7 +270,8 @@
 }
 
 @keyframes robot-glow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.3;
     transform: scale(1);
   }
@@ -238,34 +282,67 @@
 }
 
 @keyframes gear-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes gear-spin-reverse {
-  from { transform: rotate(360deg); }
-  to { transform: rotate(0deg); }
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
 }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 1px oklch(0.62 0.19 258 / 0.2), 0 0 20px -4px oklch(0.62 0.19 258 / 0.15); }
-  50% { box-shadow: 0 0 0 1px oklch(0.62 0.19 258 / 0.4), 0 0 30px -4px oklch(0.62 0.19 258 / 0.3); }
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px oklch(0.62 0.19 258 / 0.2),
+      0 0 20px -4px oklch(0.62 0.19 258 / 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px oklch(0.62 0.19 258 / 0.4),
+      0 0 30px -4px oklch(0.62 0.19 258 / 0.3);
+  }
 }
 
 @keyframes shimmer-border {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* ===== Utilities ===== */
@@ -357,9 +434,9 @@
   }
 }
 
-
 @keyframes floating-mech-1 {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
   50% {
@@ -368,7 +445,8 @@
 }
 
 @keyframes floating-mech-2 {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
   50% {
@@ -377,7 +455,8 @@
 }
 
 @keyframes floating-mech-3 {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
   50% {
@@ -397,30 +476,48 @@
   }
 }
 
-
-
 @keyframes float-rotate-1 {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(15deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(15deg);
+  }
 }
 
 @keyframes float-rotate-2 {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(25px) rotate(-15deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(25px) rotate(-15deg);
+  }
 }
 
 @keyframes float-pulse {
-  0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
-  50% { transform: translateY(-15px) scale(1.05); opacity: 0.45; }
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-15px) scale(1.05);
+    opacity: 0.45;
+  }
 }
 
 @keyframes slow-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @layer utilities {
-  
   .animate-float-rot-1 {
     animation: float-rotate-1 8s ease-in-out infinite;
   }
@@ -435,11 +532,5 @@
   }
 }
 
-
-
-
-
 @layer utilities {
-  
-  
 }

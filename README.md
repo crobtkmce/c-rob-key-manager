@@ -124,4 +124,3 @@ Content-Type: application/json
 ```
 
 _(Valid `event_type`s: `locker_opened`, `key_removed`, `key_returned`, `power_restored`)_
-
