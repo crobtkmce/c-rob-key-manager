@@ -21,75 +21,182 @@ serve(async (req) => {
     let otpsGenerated = 0;
 
     // =============================================================
-    // JUST-IN-TIME OTP GENERATION LOGIC
+    // JUST-IN-TIME OTP GENERATION LOGIC & REJECTION LOGIC
     // =============================================================
-    // Fetch pending bookings whose start_time <= now
-    const { data: pendingBookings, error: pendingErr } = await supabaseAdmin
+    // Fetch confirmed or cancelled bookings from the last 24 hours
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const { data: recentBookings, error: recentErr } = await supabaseAdmin
       .from("bookings")
       .select("*, profiles(*)")
-      .eq("status", "pending")
-      .lte("start_time", now.toISOString());
+      .in("status", ["confirmed", "cancelled"])
+      .gte("start_time", oneDayAgo.toISOString());
 
-    if (!pendingErr && pendingBookings) {
-      for (const booking of pendingBookings) {
+    if (!recentErr && recentBookings) {
+      for (const booking of recentBookings) {
         if (!booking.profiles) continue;
 
         const startTime = new Date(booking.start_time);
         const validUntil = new Date(startTime.getTime() + 10 * 60000); // 10 minutes from start_time
 
-        // If the current time is past the 10-minute validity window, skip generating an OTP
-        if (now > validUntil) {
-          continue;
-        }
+        if (booking.status === "confirmed") {
+          // If the current time is before the start time or past the 10-minute validity window, skip generating an OTP
+          if (now < startTime || now > validUntil) {
+            continue;
+          }
 
-        // Check if an OTP already exists for this booking
-        const { data: existingOtp } = await supabaseAdmin
-          .from("otps")
-          .select("id")
-          .eq("booking_id", booking.id)
-          .limit(1);
+          // Check if an OTP already exists for this booking
+          const { data: existingOtp } = await supabaseAdmin
+            .from("otps")
+            .select("id")
+            .eq("booking_id", booking.id)
+            .limit(1);
 
-        if (!existingOtp || existingOtp.length === 0) {
-          // Generate a cryptographically secure 6-digit OTP
-          const array = new Uint32Array(1);
-          crypto.getRandomValues(array);
-          const otp = (Math.floor(array[0] % 900000) + 100000).toString();
+          if (!existingOtp || existingOtp.length === 0) {
+            // Generate a cryptographically secure 6-digit OTP
+            const array = new Uint32Array(1);
+            crypto.getRandomValues(array);
+            const otp = (Math.floor(array[0] % 900000) + 100000).toString();
 
-          // Hash the OTP (SHA-256)
-          const encoder = new TextEncoder();
-          const data = encoder.encode(otp);
-          const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-          const hashArray = Array.from(new Uint8Array(hashBuffer));
-          const otp_hash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+            // Hash the OTP (SHA-256)
+            const encoder = new TextEncoder();
+            const data = encoder.encode(otp);
+            const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const otp_hash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
-          // Insert into otps table
-          const { error: insertError } = await supabaseAdmin.from("otps").insert({
-            booking_id: booking.id,
-            otp_hash: otp_hash,
-            valid_from: startTime.toISOString(),
-            valid_until: validUntil.toISOString(),
-          });
-
-          if (!insertError) {
-            otpsGenerated++;
-            // Format time nicely for the user in IST since TKMCE is in Kerala
-            const formattedTime = validUntil.toLocaleTimeString("en-US", {
-              timeZone: "Asia/Kolkata",
-              hour: "2-digit",
-              minute: "2-digit",
-              timeZoneName: "short",
+            // Insert into otps table
+            const { error: insertError } = await supabaseAdmin.from("otps").insert({
+              booking_id: booking.id,
+              otp_hash: otp_hash,
+              valid_from: startTime.toISOString(),
+              valid_until: validUntil.toISOString(),
             });
 
-            // Send email
-            const email = booking.profiles.email;
-            const msg = `Your C-ROB booking slot has started.<br><br>Your one-time password to unlock the locker is: <strong style="font-size:24px;">${otp}</strong><br><br>It is valid for exactly 10 minutes (until <strong>${formattedTime}</strong>).<br>Do not share this code.`;
-            if (RESEND_API_KEY) {
-              await sendEmail(email, "Your C-ROB Locker OTP is ready", msg);
+            if (!insertError) {
+              otpsGenerated++;
+              // Format time nicely for the user in IST since TKMCE is in Kerala
+              const formattedTime = validUntil.toLocaleTimeString("en-US", {
+                timeZone: "Asia/Kolkata",
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZoneName: "short",
+              });
+
+              // Send email
+              const email = booking.profiles.email;
+              const msg = `Your C-ROB booking slot has started.<br><br>Your one-time password to unlock the locker is: <strong style="font-size:24px;">${otp}</strong><br><br>It is valid for exactly 10 minutes (until <strong>${formattedTime}</strong>).<br>Do not share this code.`;
+              if (RESEND_API_KEY) {
+                await sendEmail(email, "Your C-ROB Locker OTP is ready", msg);
+              } else {
+                console.warn("RESEND_API_KEY not set. OTP generated but not emailed.");
+              }
             } else {
-              console.warn("RESEND_API_KEY not set. OTP generated but not emailed.");
+              console.error("Failed to insert OTP for booking:", booking.id, insertError);
             }
-          } else {
-            console.error("Failed to insert OTP for booking:", booking.id, insertError);
+          }
+        } else if (booking.status === "cancelled") {
+          // Check if rejection was already sent
+          const { data: existingRejection } = await supabaseAdmin
+            .from("notifications")
+            .select("id")
+            .eq("booking_id", booking.id)
+            .eq("type", "system")
+            .eq("message", "Booking Rejected Notification Sent")
+            .limit(1);
+
+          if (!existingRejection || existingRejection.length === 0) {
+            const formattedTime = startTime.toLocaleString("en-US", { 
+              timeZone: "Asia/Kolkata",
+              dateStyle: "medium",
+              timeStyle: "short"
+            });
+            const typeText = booking.booking_type === "team" ? `Team (${booking.team_size} members)` : "Individual";
+            const purposeText = booking.purpose ? `- <strong>Purpose:</strong> ${booking.purpose}<br>` : "";
+            const msg = `Your C-ROB key locker booking request was rejected by the admin.<br><br>
+<strong>Booking Details:</strong><br>
+- <strong>Date & Time:</strong> ${formattedTime}<br>
+- <strong>Type:</strong> ${typeText}<br>
+${purposeText}
+<br>If you have any questions, please contact the C-ROB team.`;
+            
+            await supabaseAdmin.from("notifications").insert({
+              user_id: booking.user_id,
+              booking_id: booking.id,
+              type: "system",
+              message: "Booking Rejected Notification Sent",
+            });
+
+            if (RESEND_API_KEY) {
+              await sendEmail(booking.profiles.email, "Your C-ROB Key Locker Booking Request Was Rejected", msg);
+            }
+          }
+        }
+      }
+    }
+
+    // =============================================================
+    // PENDING BOOKING TIMEOUT LOGIC
+    // =============================================================
+    // Fetch pending bookings whose start_time has arrived
+    const { data: pendingBookings, error: pendingErr } = await supabaseAdmin
+      .from("bookings")
+      .select("*, profiles(*)")
+      .eq("status", "pending")
+      .lte("start_time", now.toISOString())
+      .gte("start_time", oneDayAgo.toISOString()); // don't process extremely old hanging bookings indefinitely
+
+    if (!pendingErr && pendingBookings && pendingBookings.length > 0) {
+      for (const booking of pendingBookings) {
+        if (!booking.profiles) continue;
+
+        // Atomically check if timeout notification was already sent to avoid race conditions
+        const { data: existingTimeout } = await supabaseAdmin
+          .from("notifications")
+          .select("id")
+          .eq("booking_id", booking.id)
+          .eq("type", "system")
+          .eq("message", "Booking Timeout Notification Sent")
+          .limit(1);
+
+        if (!existingTimeout || existingTimeout.length === 0) {
+          // Double-check the status is still pending right before we expire it
+          const { data: latestBooking } = await supabaseAdmin
+            .from("bookings")
+            .select("status")
+            .eq("id", booking.id)
+            .single();
+
+          if (latestBooking && latestBooking.status === "pending") {
+            // Set status to expired
+            await supabaseAdmin.from("bookings").update({ status: "expired" }).eq("id", booking.id);
+
+            const startTime = new Date(booking.start_time);
+            const formattedTime = startTime.toLocaleString("en-US", { 
+              timeZone: "Asia/Kolkata",
+              dateStyle: "medium",
+              timeStyle: "short"
+            });
+            const typeText = booking.booking_type === "team" ? `Team (${booking.team_size} members)` : "Individual";
+            const purposeText = booking.purpose ? `- <strong>Purpose:</strong> ${booking.purpose}<br>` : "";
+            
+            const msg = `The requested shift has started while your booking was still pending, so the request has timed out because it was not approved in time.<br><br>
+You should not assume that the booking is approved.<br><br>
+<strong>Booking Details:</strong><br>
+- <strong>Date & Time:</strong> ${formattedTime}<br>
+- <strong>Type:</strong> ${typeText}<br>
+${purposeText}
+<br>Please make a new booking if you still need the key.`;
+
+            await supabaseAdmin.from("notifications").insert({
+              user_id: booking.user_id,
+              booking_id: booking.id,
+              type: "system",
+              message: "Booking Timeout Notification Sent",
+            });
+
+            if (RESEND_API_KEY) {
+              await sendEmail(booking.profiles.email, "C-ROB Key Locker Booking Request Timed Out", msg);
+            }
           }
         }
       }
