@@ -457,7 +457,7 @@ export function BookingsSection({ defaultStatus = "All" }: { defaultStatus?: str
             />
           </div>
           <div className="flex items-center gap-1.5 p-1 bg-muted/30 rounded-lg border border-border/50">
-            {["All", "Pending", "Approved", "Rejected"].map((s) => (
+            {["All", "Pending", "Approved", "Entry Only", "Rejected"].map((s) => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
@@ -653,6 +653,7 @@ export function BookingsSection({ defaultStatus = "All" }: { defaultStatus?: str
 
                             {(b.status === "completed" ||
                               b.status === "cancelled" ||
+                              b.status === "entry_only" ||
                               b.status === "expired") && (
                               <span className="text-xs text-muted-foreground italic">
                                 No actions available

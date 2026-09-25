@@ -8,7 +8,8 @@ serve(async (req) => {
     // Only allow authorized cron requests
     const authHeader = req.headers.get("Authorization");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!serviceRoleKey || authHeader !== `Bearer ${serviceRoleKey}`) {
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    if (authHeader !== `Bearer ${serviceRoleKey}` && authHeader !== `Bearer ${cronSecret}`) {
       return new Response("Unauthorized", { status: 401 });
     }
 
@@ -28,7 +29,7 @@ serve(async (req) => {
     const { data: recentBookings, error: recentErr } = await supabaseAdmin
       .from("bookings")
       .select("*, profiles(*)")
-      .in("status", ["confirmed", "cancelled"])
+      .in("status", ["confirmed", "cancelled", "entry_only"])
       .gte("start_time", oneDayAgo.toISOString());
 
     if (!recentErr && recentBookings) {
@@ -38,7 +39,56 @@ serve(async (req) => {
         const startTime = new Date(booking.start_time);
         const validUntil = new Date(startTime.getTime() + 10 * 60000); // 10 minutes from start_time
 
+        const formattedTime = startTime.toLocaleString("en-US", {
+          timeZone: "Asia/Kolkata",
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
+        const typeText =
+          booking.booking_type === "team"
+            ? `Team (${booking.team_size} members)`
+            : "Individual";
+        const purposeText = booking.purpose
+          ? `- <strong>Purpose:</strong> ${booking.purpose}<br>`
+          : "";
+
         if (booking.status === "confirmed") {
+          // 1. APPROVAL EMAIL LOGIC (Send Immediately)
+          const { data: existingApproval } = await supabaseAdmin
+            .from("notifications")
+            .select("id")
+            .eq("booking_id", booking.id)
+            .eq("type", "system")
+            .eq("message", "Booking Approved Notification Sent")
+            .limit(1);
+
+          if (!existingApproval || existingApproval.length === 0) {
+            const { error: insertApprovalError } = await supabaseAdmin.from("notifications").insert({
+              user_id: booking.user_id,
+              booking_id: booking.id,
+              type: "system",
+              message: "Booking Approved Notification Sent",
+            });
+
+            if (!insertApprovalError) {
+              const msg = `Your C-ROB key locker booking request has been approved by the admin.<br><br>
+<strong>Booking Details:</strong><br>
+- <strong>Date & Time:</strong> ${formattedTime}<br>
+- <strong>Type:</strong> ${typeText}<br>
+${purposeText}
+<br>Your OTP will be emailed to you when the shift starts.`;
+
+              if (RESEND_API_KEY) {
+                await sendEmail(
+                  booking.profiles.email,
+                  "Your C-ROB Booking Request Was Approved",
+                  msg,
+                );
+              }
+            }
+          }
+
+          // 2. OTP GENERATION LOGIC
           // If the current time is before the start time or past the 10-minute validity window, skip generating an OTP
           if (now < startTime || now > validUntil) {
             continue;
@@ -94,6 +144,40 @@ serve(async (req) => {
               console.error("Failed to insert OTP for booking:", booking.id, insertError);
             }
           }
+        } else if (booking.status === "entry_only") {
+          const { data: existingEntryOnly } = await supabaseAdmin
+            .from("notifications")
+            .select("id")
+            .eq("booking_id", booking.id)
+            .eq("type", "system")
+            .eq("message", "Booking Entry Only Notification Sent")
+            .limit(1);
+
+          if (!existingEntryOnly || existingEntryOnly.length === 0) {
+            const { error: insertEntryError } = await supabaseAdmin.from("notifications").insert({
+              user_id: booking.user_id,
+              booking_id: booking.id,
+              type: "system",
+              message: "Booking Entry Only Notification Sent",
+            });
+
+            if (!insertEntryError) {
+              const msg = `The request for the key has not been approved. However, you may still work on your project in the CROB room during your requested slot. Key responsibility for this slot has been assigned to another team.<br><br>
+<strong>Booking Details:</strong><br>
+- <strong>Date & Time:</strong> ${formattedTime}<br>
+- <strong>Type:</strong> ${typeText}<br>
+${purposeText}
+<br>Please coordinate with the team holding the key.`;
+
+              if (RESEND_API_KEY) {
+                await sendEmail(
+                  booking.profiles.email,
+                  "C-ROB Key Access Update",
+                  msg,
+                );
+              }
+            }
+          }
         } else if (booking.status === "cancelled") {
           // Check if rejection was already sent
           const { data: existingRejection } = await supabaseAdmin
@@ -105,29 +189,30 @@ serve(async (req) => {
             .limit(1);
 
           if (!existingRejection || existingRejection.length === 0) {
-            const formattedTime = startTime.toLocaleString("en-US", { 
-              timeZone: "Asia/Kolkata",
-              dateStyle: "medium",
-              timeStyle: "short"
-            });
-            const typeText = booking.booking_type === "team" ? `Team (${booking.team_size} members)` : "Individual";
-            const purposeText = booking.purpose ? `- <strong>Purpose:</strong> ${booking.purpose}<br>` : "";
-            const msg = `Your C-ROB key locker booking request was rejected by the admin.<br><br>
-<strong>Booking Details:</strong><br>
-- <strong>Date & Time:</strong> ${formattedTime}<br>
-- <strong>Type:</strong> ${typeText}<br>
-${purposeText}
-<br>If you have any questions, please contact the C-ROB team.`;
-            
-            await supabaseAdmin.from("notifications").insert({
+            // Attempt to insert the notification. The unique constraint prevents race conditions.
+            const { error: insertError } = await supabaseAdmin.from("notifications").insert({
               user_id: booking.user_id,
               booking_id: booking.id,
               type: "system",
               message: "Booking Rejected Notification Sent",
             });
 
-            if (RESEND_API_KEY) {
-              await sendEmail(booking.profiles.email, "Your C-ROB Key Locker Booking Request Was Rejected", msg);
+            // If there's no error, we won the race and can safely send the email
+            if (!insertError) {
+              const msg = `Your C-ROB key locker booking request was rejected by the admin.<br><br>
+<strong>Booking Details:</strong><br>
+- <strong>Date & Time:</strong> ${formattedTime}<br>
+- <strong>Type:</strong> ${typeText}<br>
+${purposeText}
+<br>If you have any questions, please contact the C-ROB team.`;
+
+              if (RESEND_API_KEY) {
+                await sendEmail(
+                  booking.profiles.email,
+                  "Your C-ROB Key Locker Booking Request Was Rejected",
+                  msg,
+                );
+              }
             }
           }
         }
@@ -159,26 +244,37 @@ ${purposeText}
           .limit(1);
 
         if (!existingTimeout || existingTimeout.length === 0) {
-          // Double-check the status is still pending right before we expire it
-          const { data: latestBooking } = await supabaseAdmin
+          // Atomically update the status from pending to expired
+          const { data: updatedBooking, error: updateErr } = await supabaseAdmin
             .from("bookings")
-            .select("status")
+            .update({ status: "expired" })
             .eq("id", booking.id)
-            .single();
+            .eq("status", "pending")
+            .select("id"); // Must select to verify the row was actually updated
 
-          if (latestBooking && latestBooking.status === "pending") {
-            // Set status to expired
-            await supabaseAdmin.from("bookings").update({ status: "expired" }).eq("id", booking.id);
+          if (!updateErr && updatedBooking && updatedBooking.length > 0) {
+            // We successfully expired it. Insert the notification (ignore duplicates if any)
+            await supabaseAdmin.from("notifications").insert({
+              user_id: booking.user_id,
+              booking_id: booking.id,
+              type: "system",
+              message: "Booking Timeout Notification Sent",
+            });
 
             const startTime = new Date(booking.start_time);
-            const formattedTime = startTime.toLocaleString("en-US", { 
+            const formattedTime = startTime.toLocaleString("en-US", {
               timeZone: "Asia/Kolkata",
               dateStyle: "medium",
-              timeStyle: "short"
+              timeStyle: "short",
             });
-            const typeText = booking.booking_type === "team" ? `Team (${booking.team_size} members)` : "Individual";
-            const purposeText = booking.purpose ? `- <strong>Purpose:</strong> ${booking.purpose}<br>` : "";
-            
+            const typeText =
+              booking.booking_type === "team"
+                ? `Team (${booking.team_size} members)`
+                : "Individual";
+            const purposeText = booking.purpose
+              ? `- <strong>Purpose:</strong> ${booking.purpose}<br>`
+              : "";
+
             const msg = `The requested shift has started while your booking was still pending, so the request has timed out because it was not approved in time.<br><br>
 You should not assume that the booking is approved.<br><br>
 <strong>Booking Details:</strong><br>
@@ -187,15 +283,12 @@ You should not assume that the booking is approved.<br><br>
 ${purposeText}
 <br>Please make a new booking if you still need the key.`;
 
-            await supabaseAdmin.from("notifications").insert({
-              user_id: booking.user_id,
-              booking_id: booking.id,
-              type: "system",
-              message: "Booking Timeout Notification Sent",
-            });
-
             if (RESEND_API_KEY) {
-              await sendEmail(booking.profiles.email, "C-ROB Key Locker Booking Request Timed Out", msg);
+              await sendEmail(
+                booking.profiles.email,
+                "C-ROB Key Locker Booking Request Timed Out",
+                msg,
+              );
             }
           }
         }
