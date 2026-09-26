@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import nodemailer from "npm:nodemailer@6.9.7";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 serve(async (req) => {
   try {
@@ -53,37 +53,10 @@ serve(async (req) => {
           : "";
 
         if (booking.status === "confirmed") {
-          // 1. APPROVAL EMAIL LOGIC (Send Immediately)
-          const { data: existingApproval } = await supabaseAdmin
-            .from("notifications")
-            .select("id")
-            .eq("booking_id", booking.id)
-            .eq("type", "system")
-            .eq("message", "Booking Approved Notification Sent")
-            .limit(1);
+          // APPROVAL EMAIL LOGIC is now handled by the admin-booking-action edge function directly.
+          // We only generate the OTP here.
 
-          if (!existingApproval || existingApproval.length === 0) {
-            const { error: insertApprovalError } = await supabaseAdmin.from("notifications").insert({
-              user_id: booking.user_id,
-              booking_id: booking.id,
-              type: "system",
-              message: "Booking Approved Notification Sent",
-            });
-
-            if (!insertApprovalError) {
-              const msg = `Your CROB booking request has been confirmed.<br><br>An OTP will be sent to you at the start time of your booking.`;
-
-              if (RESEND_API_KEY) {
-                await sendEmail(
-                  booking.profiles.email,
-                  "CROB Booking Confirmed",
-                  msg,
-                );
-              }
-            }
-          }
-
-          // 2. OTP GENERATION LOGIC
+          // OTP GENERATION LOGIC
           // If the current time is before the start time or past the 10-minute validity window, skip generating an OTP
           if (now < startTime || now > validUntil) {
             continue;
@@ -130,77 +103,17 @@ serve(async (req) => {
               // Send email
               const email = booking.profiles.email;
               const msg = `Your C-ROB booking slot has started.<br><br>Your one-time password to unlock the locker is: <strong style="font-size:24px;">${otp}</strong><br><br>It is valid for exactly 10 minutes (until <strong>${formattedTime}</strong>).<br>Do not share this code.`;
-              if (RESEND_API_KEY) {
+              if (true) {
                 await sendEmail(email, "Your C-ROB Locker OTP is ready", msg);
               } else {
-                console.warn("RESEND_API_KEY not set. OTP generated but not emailed.");
+                console.warn("SMTP credentials not set. OTP generated but not emailed.");
               }
             } else {
               console.error("Failed to insert OTP for booking:", booking.id, insertError);
             }
           }
-        } else if (booking.status === "entry_only") {
-          const { data: existingEntryOnly } = await supabaseAdmin
-            .from("notifications")
-            .select("id")
-            .eq("booking_id", booking.id)
-            .eq("type", "system")
-            .eq("message", "Booking Entry Only Notification Sent")
-            .limit(1);
-
-          if (!existingEntryOnly || existingEntryOnly.length === 0) {
-            const { error: insertEntryError } = await supabaseAdmin.from("notifications").insert({
-              user_id: booking.user_id,
-              booking_id: booking.id,
-              type: "system",
-              message: "Booking Entry Only Notification Sent",
-            });
-
-            if (!insertEntryError) {
-              const msg = `Your CROB booking request was denied by the admin because the requested slot overlaps with an existing booking.<br><br>You can however enter the CROB room and do your project. The key will be handled by another team/individual.`;
-
-              if (RESEND_API_KEY) {
-                await sendEmail(
-                  booking.profiles.email,
-                  "CROB Booking Request - Entry Allowed",
-                  msg,
-                );
-              }
-            }
-          }
-        } else if (booking.status === "cancelled") {
-          // Check if rejection was already sent
-          const { data: existingRejection } = await supabaseAdmin
-            .from("notifications")
-            .select("id")
-            .eq("booking_id", booking.id)
-            .eq("type", "system")
-            .eq("message", "Booking Rejected Notification Sent")
-            .limit(1);
-
-          if (!existingRejection || existingRejection.length === 0) {
-            // Attempt to insert the notification. The unique constraint prevents race conditions.
-            const { error: insertError } = await supabaseAdmin.from("notifications").insert({
-              user_id: booking.user_id,
-              booking_id: booking.id,
-              type: "system",
-              message: "Booking Rejected Notification Sent",
-            });
-
-            // If there's no error, we won the race and can safely send the email
-            if (!insertError) {
-              const msg = `Your CROB booking request has been rejected by the admin.<br><br>Entry to the CROB room has been denied.<br><br>Please contact the admin for further questions.`;
-
-              if (RESEND_API_KEY) {
-                await sendEmail(
-                  booking.profiles.email,
-                  "CROB Booking Request Rejected",
-                  msg,
-                );
-              }
-            }
-          }
         }
+        // REJECTION and ENTRY_ONLY emails are now handled by the admin-booking-action edge function directly.
       }
     }
 
@@ -268,7 +181,7 @@ You should not assume that the booking is approved.<br><br>
 ${purposeText}
 <br>Please make a new booking if you still need the key.`;
 
-            if (RESEND_API_KEY) {
+            if (true) {
               await sendEmail(
                 booking.profiles.email,
                 "C-ROB Key Locker Booking Request Timed Out",
@@ -324,7 +237,7 @@ ${purposeText}
             });
 
             // Email
-            if (RESEND_API_KEY) {
+            if (true) {
               await sendEmail(booking.profiles.email, "Reminder: Return C-ROB Key", msg);
             }
             remindersSent++;
@@ -362,7 +275,7 @@ ${purposeText}
 
               await supabaseAdmin.from("notifications").insert(notifs);
 
-              if (RESEND_API_KEY) {
+              if (true) {
                 const emails = admins.map((a: any) => a.email).filter(Boolean);
                 await sendEmail(emails, "URGENT: C-ROB Key Overdue", msg);
               }
@@ -430,23 +343,36 @@ ${purposeText}
 });
 
 async function sendEmail(to: string | string[], subject: string, text: string) {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      // TEMPORARY TESTING SENDER: onboarding@resend.dev bypasses domain verification limits
-      // but only works if sending to the verified Resend account owner's email address.
-      // MUST REPLACE WITH A VERIFIED DOMAIN BEFORE PRODUCTION!
-      from: "onboarding@resend.dev",
-      to: Array.isArray(to) ? to : [to],
+  const gmailUser = Deno.env.get("GMAIL_USER");
+  const gmailAppPassword = Deno.env.get("GMAIL_APP_PASSWORD");
+
+  if (!gmailUser || !gmailAppPassword) {
+    console.error("Missing Google SMTP Credentials");
+    return;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: gmailUser,
+        pass: gmailAppPassword,
+      },
+    });
+
+    const toAddresses = Array.isArray(to) ? to : [to];
+
+    const info = await transporter.sendMail({
+      from: '"C-ROB Key Locker" <' + gmailUser + '>',
+      to: toAddresses.join(", "),
       subject: subject,
-      html: `<p>${text}</p>`,
-    }),
-  });
-  if (!res.ok) {
-    console.error("Resend error:", await res.text());
+      html: "<p>" + text + "</p>",
+    });
+
+    console.log("Email sent successfully. MessageId:", info.messageId);
+  } catch (err: any) {
+    console.error("Nodemailer failed:", err.message);
   }
 }
