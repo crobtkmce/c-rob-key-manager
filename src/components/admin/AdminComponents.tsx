@@ -364,8 +364,11 @@ export function BookingsSection({ defaultStatus = "All" }: { defaultStatus?: str
     }) => {
       // 1. Update booking
       if (["confirmed", "entry_only", "cancelled"].includes(status)) {
+        const { data: { session } } = await supabase!.auth.getSession();
+        if (!session) throw new Error('Admin authentication could not be verified.');
         const { data, error } = await supabase!.functions.invoke("admin-booking-action", {
           body: { id, action: status },
+          headers: { Authorization: 'Bearer ' + session.access_token }
         });
         if (error) { let errorMsg = error.message; if (error.context instanceof Response) { try { const errorData = await error.context.clone().json(); errorMsg = errorData.error || errorMsg; } catch (e) {} } throw new Error('Booking approval failed: ' + errorMsg); } if (data?.error) throw new Error('Booking approval failed: ' + data.error);
       } else {
