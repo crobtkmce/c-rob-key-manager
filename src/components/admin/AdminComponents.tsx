@@ -367,8 +367,7 @@ export function BookingsSection({ defaultStatus = "All" }: { defaultStatus?: str
         const { data, error } = await supabase!.functions.invoke("admin-booking-action", {
           body: { id, action: status },
         });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
+        if (error) { let errorMsg = error.message; if (error.context instanceof Response) { try { const errorData = await error.context.clone().json(); errorMsg = errorData.error || errorMsg; } catch (e) {} } throw new Error('Booking approval failed: ' + errorMsg); } if (data?.error) throw new Error('Booking approval failed: ' + data.error);
       } else {
         const { error: updateError } = await supabase!
           .from("bookings")

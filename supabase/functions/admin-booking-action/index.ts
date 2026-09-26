@@ -96,7 +96,7 @@ serve(async (req) => {
 
     // 5. Update booking status
     // This triggers the Postgres BEFORE UPDATE constraint natively
-    const { error: updateErr } = await supabaseAdmin
+    const { error: updateErr } = await supabaseClient
       .from("bookings")
       .update({ status: action })
       .eq("id", id);
