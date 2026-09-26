@@ -71,17 +71,12 @@ serve(async (req) => {
             });
 
             if (!insertApprovalError) {
-              const msg = `Your C-ROB key locker booking request has been approved by the admin.<br><br>
-<strong>Booking Details:</strong><br>
-- <strong>Date & Time:</strong> ${formattedTime}<br>
-- <strong>Type:</strong> ${typeText}<br>
-${purposeText}
-<br>Your OTP will be emailed to you when the shift starts.`;
+              const msg = `Your CROB booking request has been confirmed.<br><br>An OTP will be sent to you at the start time of your booking.`;
 
               if (RESEND_API_KEY) {
                 await sendEmail(
                   booking.profiles.email,
-                  "Your C-ROB Booking Request Was Approved",
+                  "CROB Booking Confirmed",
                   msg,
                 );
               }
@@ -162,17 +157,12 @@ ${purposeText}
             });
 
             if (!insertEntryError) {
-              const msg = `The request for the key has not been approved. However, you may still work on your project in the CROB room during your requested slot. Key responsibility for this slot has been assigned to another team.<br><br>
-<strong>Booking Details:</strong><br>
-- <strong>Date & Time:</strong> ${formattedTime}<br>
-- <strong>Type:</strong> ${typeText}<br>
-${purposeText}
-<br>Please coordinate with the team holding the key.`;
+              const msg = `Your CROB booking request was denied by the admin because the requested slot overlaps with an existing booking.<br><br>You can however enter the CROB room and do your project. The key will be handled by another team/individual.`;
 
               if (RESEND_API_KEY) {
                 await sendEmail(
                   booking.profiles.email,
-                  "C-ROB Key Access Update",
+                  "CROB Booking Request - Entry Allowed",
                   msg,
                 );
               }
@@ -199,17 +189,12 @@ ${purposeText}
 
             // If there's no error, we won the race and can safely send the email
             if (!insertError) {
-              const msg = `Your C-ROB key locker booking request was rejected by the admin.<br><br>
-<strong>Booking Details:</strong><br>
-- <strong>Date & Time:</strong> ${formattedTime}<br>
-- <strong>Type:</strong> ${typeText}<br>
-${purposeText}
-<br>If you have any questions, please contact the C-ROB team.`;
+              const msg = `Your CROB booking request has been rejected by the admin.<br><br>Entry to the CROB room has been denied.<br><br>Please contact the admin for further questions.`;
 
               if (RESEND_API_KEY) {
                 await sendEmail(
                   booking.profiles.email,
-                  "Your C-ROB Key Locker Booking Request Was Rejected",
+                  "CROB Booking Request Rejected",
                   msg,
                 );
               }

@@ -500,8 +500,17 @@ export function BookingsSection({ defaultStatus = "All" }: { defaultStatus?: str
                 </TableRow>
               ) : (
                 filtered.map((b: any) => {
-                  const isProcessing = processingId === b.id;
-                  return (
+                    const isProcessing = processingId === b.id;
+                    const bStart = new Date(b.start_time).getTime();
+                    const bEnd = bStart + b.duration_hours * 3600000;
+                    const isOverlapping = bookings?.some((other: any) => {
+                      if (other.id === b.id || other.status !== "confirmed") return false;
+                      const oStart = new Date(other.start_time).getTime();
+                      const oEnd = oStart + other.duration_hours * 3600000;
+                      return bStart < oEnd && bEnd > oStart;
+                    });
+
+                    return (
                     <TableRow key={b.id}>
                       <TableCell>
                         <div className="font-medium">{format(new Date(b.start_time), "PPP")}</div>
@@ -568,45 +577,54 @@ export function BookingsSection({ defaultStatus = "All" }: { defaultStatus?: str
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-1.5">
                             {b.status === "pending" && (
-                              <>
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  className="h-7 text-[11px] px-2 bg-green-600 hover:bg-green-700 text-white border-0"
-                                  onClick={() => handleAction(b, "confirmed")}
-                                  disabled={isProcessing}
-                                >
-                                  {isProcessing &&
-                                  updateBooking.variables?.status === "confirmed" ? (
-                                    <RefreshCw className="mr-1 size-3 animate-spin" />
+                                <>
+                                  {!isOverlapping ? (
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      className="h-7 text-[11px] px-2 bg-green-600 hover:bg-green-700 text-white border-0"
+                                      onClick={() => handleAction(b, "confirmed")}
+                                      disabled={isProcessing}
+                                    >
+                                      {isProcessing && updateBooking.variables?.status === "confirmed" ? (
+                                        <RefreshCw className="mr-1 size-3 animate-spin" />
+                                      ) : (
+                                        <CheckCircle className="mr-1 size-3" />
+                                      )}
+                                      Approve
+                                    </Button>
                                   ) : (
-                                    <CheckCircle className="mr-1 size-3" />
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      className="h-7 text-[11px] px-2 bg-green-600 hover:bg-green-700 text-white border-0"
+                                      onClick={() => handleAction(b, "entry_only")}
+                                      disabled={isProcessing}
+                                    >
+                                      {isProcessing && updateBooking.variables?.status === "entry_only" ? (
+                                        <RefreshCw className="mr-1 size-3 animate-spin" />
+                                      ) : (
+                                        <CheckCircle className="mr-1 size-3" />
+                                      )}
+                                      Give Entry
+                                    </Button>
                                   )}
-                                  Approve
-                                </Button>
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  className="h-7 text-[11px] px-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground border-0"
-                                  onClick={() =>
-                                    handleAction(
-                                      b,
-                                      "cancelled",
-                                      "Are you sure you want to reject this booking request?",
-                                    )
-                                  }
-                                  disabled={isProcessing}
-                                >
-                                  {isProcessing &&
-                                  updateBooking.variables?.status === "cancelled" ? (
-                                    <RefreshCw className="mr-1 size-3 animate-spin" />
-                                  ) : (
-                                    <XCircle className="mr-1 size-3" />
-                                  )}
-                                  Reject
-                                </Button>
-                              </>
-                            )}
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="h-7 text-[11px] px-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground border-0"
+                                    onClick={() => handleAction(b, "cancelled")}
+                                    disabled={isProcessing}
+                                  >
+                                    {isProcessing && updateBooking.variables?.status === "cancelled" ? (
+                                      <RefreshCw className="mr-1 size-3 animate-spin" />
+                                    ) : (
+                                      <XCircle className="mr-1 size-3" />
+                                    )}
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
 
                             {b.status === "confirmed" && (
                               <>
