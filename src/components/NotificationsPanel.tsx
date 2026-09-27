@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { Bell, Check, X } from "lucide-react";
+import { Bell } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -43,19 +43,22 @@ export function NotificationsPanel() {
     refetchInterval: 60000, // Poll every minute
   });
 
-  const markAsRead = useMutation({
-    mutationFn: async (id: string) => {
-      if (!supabase) return;
-      const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+  const markAllAsRead = useMutation({
+    mutationFn: async (unreadIds: string[]) => {
+      if (!supabase || unreadIds.length === 0) return;
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .in("id", unreadIds);
       if (error) throw error;
     },
-    onMutate: async (id: string) => {
+    onMutate: async (unreadIds: string[]) => {
       await queryClient.cancelQueries({ queryKey: ["notifications", user?.id] });
       const previousNotifications = queryClient.getQueryData<Notification[]>(["notifications", user?.id]);
       
       queryClient.setQueryData<Notification[]>(["notifications", user?.id], (old) => {
         if (!old) return old;
-        return old.map(n => n.id === id ? { ...n, is_read: true } : n);
+        return old.map(n => unreadIds.includes(n.id) ? { ...n, is_read: true } : n);
       });
       
       return { previousNotifications };
@@ -70,10 +73,20 @@ export function NotificationsPanel() {
     },
   });
 
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) {
+      const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+      if (unreadIds.length > 0) {
+        markAllAsRead.mutate(unreadIds);
+      }
+    }
+  };
+
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -117,17 +130,6 @@ export function NotificationsPanel() {
                       )}
                       {n.message}
                     </p>
-                    {!n.is_read && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 shrink-0 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100"
-                        onClick={() => markAsRead.mutate(n.id)}
-                        title="Mark as read"
-                      >
-                        <Check className="size-4" />
-                      </Button>
-                    )}
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
