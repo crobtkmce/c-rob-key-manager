@@ -109,28 +109,21 @@ export function CurrentSession() {
     mutationFn: async () => {
       if (!handoverEmail || !heldSession || !user) throw new Error("Missing data");
 
-      const { data: recipient, error: recErr } = await supabase!
-        .from("profiles")
-        .select("id")
-        .eq("email", handoverEmail.toLowerCase())
-        .maybeSingle();
-
-      if (recErr || !recipient) throw new Error("User not found or not registered");
-      if (recipient.id === user.id) throw new Error("Cannot hand over to yourself");
-
-      const expiresAt = new Date(Date.now() + 10 * 60000).toISOString();
-      const { error: insErr } = await supabase!.from("handovers").insert({
-        session_id: heldSession.id,
-        from_user_id: user.id,
-        to_user_id: recipient.id,
-        status: "pending_acceptance",
-        expires_at: expiresAt,
+      const targetEmail = `${handoverEmail.trim().toLowerCase()}@tkmce.ac.in`;
+      
+      const { data, error } = await supabase!.functions.invoke("key-handover", {
+        body: {
+          action: "initiate",
+          target_email: targetEmail,
+          session_id: heldSession.id,
+        },
       });
 
-      if (insErr) {
-        if (insErr.code === "23505")
-          throw new Error("A handover is already pending for this session.");
-        throw new Error("Failed to initiate handover");
+      if (error) {
+        throw new Error(error.message || "Failed to initiate handover");
+      }
+      if (data?.error) {
+        throw new Error(data.error);
       }
     },
     onSuccess: () => {
@@ -149,21 +142,21 @@ export function CurrentSession() {
       sessionId,
     }: {
       id: string;
-      action: "completed" | "rejected" | "cancelled";
+      action: "accept" | "reject" | "cancel";
       sessionId: string;
     }) => {
-      const { error: updErr } = await supabase!
-        .from("handovers")
-        .update({ status: action })
-        .eq("id", id);
-      if (updErr) throw updErr;
+      const { data, error } = await supabase!.functions.invoke("key-handover", {
+        body: {
+          action,
+          handover_id: id,
+        },
+      });
 
-      if (action === "completed") {
-        // Transfer custody
-        await supabase!
-          .from("key_sessions")
-          .update({ current_holder: user!.id })
-          .eq("id", sessionId);
+      if (error) {
+        throw new Error(error.message || "Failed to respond to handover");
+      }
+      if (data?.error) {
+        throw new Error(data.error);
       }
     },
     onSuccess: () => {
@@ -175,45 +168,7 @@ export function CurrentSession() {
   if (loadingHeld || loadingUpcoming) return null;
 
   // Render Logic
-  if (pendingHandover?.to_user_id === user?.id) {
-    return (
-      <Alert className="bg-primary/10 border-primary/40 shadow-sm">
-        <ArrowRightLeft className="size-5 text-primary" />
-        <AlertTitle className="text-primary font-bold text-base">Key Handover Request</AlertTitle>
-        <AlertDescription className="mt-2">
-          <strong>{(pendingHandover.from_profile as any)?.full_name}</strong> wants to physically
-          hand over the C-ROB key to you. Do you accept custody?
-          <div className="mt-3 flex gap-3">
-            <Button
-              size="sm"
-              onClick={() =>
-                respondToHandover.mutate({
-                  id: pendingHandover.id,
-                  action: "completed",
-                  sessionId: pendingHandover.session_id,
-                })
-              }
-            >
-              Accept Key
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                respondToHandover.mutate({
-                  id: pendingHandover.id,
-                  action: "rejected",
-                  sessionId: pendingHandover.session_id,
-                })
-              }
-            >
-              Decline
-            </Button>
-          </div>
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  
 
   const activeBooking = heldSession?.bookings || upcomingBooking;
 
@@ -228,7 +183,50 @@ export function CurrentSession() {
     : `Starts in ${formatDistanceToNow(start)}`;
 
   return (
-    <Card className="panel border-primary/40 bg-card/60 shadow-md relative overflow-hidden transition-all duration-300 hover:border-primary/60">
+    <>
+      {pendingHandover?.to_user_id === user?.id && (
+        <Dialog open={true}>
+          <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle className="text-primary flex items-center gap-2">
+                <KeyRound className="size-5" />
+                Key Handover Request
+              </DialogTitle>
+              <DialogDescription className="text-base text-foreground mt-4">
+                <strong>{(pendingHandover.from_profile as any)?.full_name}</strong> has requested to hand over responsibility for the C-ROB key to you.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-3 justify-end mt-4">
+              <Button
+                variant="outline"
+                disabled={respondToHandover.isPending}
+                onClick={() =>
+                  respondToHandover.mutate({
+                    id: pendingHandover.id,
+                    action: "reject",
+                    sessionId: pendingHandover.session_id,
+                  })
+                }
+              >
+                Reject
+              </Button>
+              <Button
+                disabled={respondToHandover.isPending}
+                onClick={() =>
+                  respondToHandover.mutate({
+                    id: pendingHandover.id,
+                    action: "accept",
+                    sessionId: pendingHandover.session_id,
+                  })
+                }
+              >
+                Accept
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+      <Card className="panel border-primary/40 bg-card/60 shadow-md relative overflow-hidden transition-all duration-300 hover:border-primary/60">
       <div className="absolute top-0 right-0 h-full w-1/2 bg-gradient-to-l from-primary/5 to-transparent pointer-events-none" />
       <CardHeader className="pb-3 relative z-10">
         <div className="flex items-center justify-between">
@@ -282,7 +280,7 @@ export function CurrentSession() {
                       onClick={() =>
                         respondToHandover.mutate({
                           id: pendingHandover.id,
-                          action: "cancelled",
+                          action: "cancel",
                           sessionId: pendingHandover.session_id,
                         })
                       }
@@ -348,13 +346,16 @@ export function CurrentSession() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Recipient's College Email</Label>
-              <Input
-                id="email"
-                placeholder="student@tkmce.ac.in"
-                value={handoverEmail}
-                onChange={(e) => setHandoverEmail(e.target.value)}
-              />
+              <Label htmlFor="email">Recipient's College Username</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="email"
+                  placeholder="studentname"
+                  value={handoverEmail}
+                  onChange={(e) => setHandoverEmail(e.target.value.replace(/@.*$/, ""))}
+                />
+                <span className="text-muted-foreground whitespace-nowrap">@tkmce.ac.in</span>
+              </div>
             </div>
             {handoverError && <p className="text-sm text-destructive">{handoverError}</p>}
           </div>
@@ -369,5 +370,6 @@ export function CurrentSession() {
         </DialogContent>
       </Dialog>
     </Card>
+    </>
   );
 }
