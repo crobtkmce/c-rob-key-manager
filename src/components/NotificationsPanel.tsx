@@ -49,7 +49,23 @@ export function NotificationsPanel() {
       const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["notifications", user?.id] });
+      const previousNotifications = queryClient.getQueryData<Notification[]>(["notifications", user?.id]);
+      
+      queryClient.setQueryData<Notification[]>(["notifications", user?.id], (old) => {
+        if (!old) return old;
+        return old.map(n => n.id === id ? { ...n, is_read: true } : n);
+      });
+      
+      return { previousNotifications };
+    },
+    onError: (err, newTodo, context) => {
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(["notifications", user?.id], context.previousNotifications);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications", user?.id] });
     },
   });
